@@ -90,7 +90,7 @@ However, what is actually happening is that we are horribly overfitting to our t
 
 [[./figs/RNN_overfitting_val.png]]
 
-I switched to a more direct implementation of RNNs instead of using the included nn.LSTM, since it doesn't really feel like we need the long-range dependency anyways. If we think about how a chart works, it feels like the hidden state should contain all the information about the chart[fn:4]. It's not possible for more notes later to make a chart /easier/, and blocks of stream don't really interact in any way with other blocks of stream.
+I switched to a more direct implementation of RNNs instead of using the shipped-in-pytorch nn.LSTM, since it doesn't really feel like we need the long-range dependency anyways. If we think about how a chart works, it feels like the hidden state should contain all the information about the chart[fn:4]. It's not possible for more notes later to make a chart /easier/, and blocks of stream don't really interact in any way with other blocks of stream.
 
 [[./figs/RNN.png]]
 
@@ -100,7 +100,7 @@ That's more like it! It's clearly learned something which generalizes to the val
 
 Ultimately, if you want something quick and easy, the Support Vector Classifier is a pretty safe choice. It performs well, it's rarely off by more than a block level, and it doesn't require substantial computational power. If you want to get a rating estimate, and you don't want to bother someone about it, it's a good pick. If people want to play with this, I could probably try serving the model in a browser or something.
 
-As fun as it was to fit a recurrent neural network to this problem, it does seem a bit overkill for this problem. 
+As fun as it was to fit a recurrent neural network to this problem, it does seem a bit overkill for this problem. Classical techniques work well on this for stamina in particular, and although it's interesting that you can get competitive results with the RNN, I think the problem is actually too linear to beat the more directly linear techniques.
 
 There's some fun potential for this for stamina players. It's possible this could be included in the stats portion of simply love (alongside breakdown, percent stream, etc), and a regression version of this could be used to give a very loose metric of "hard 15" vs "easy 15". I know games like [[https://www.youtube.com/watch?v=J5jibw9rqjk][jubeat]] do this, where charts within a certain level above 9 are marked as, for example, 10.9 instead of just as 10. This is probably most useful for players who use rate mods, since it's not always immediately clear how x1.2 bpm would affect the rating of the chart, and a quick reference point would be pretty useful.
 
