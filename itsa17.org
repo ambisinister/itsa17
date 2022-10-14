@@ -2,7 +2,7 @@
 
 * Abstract
 
-I use sequence-to-one models in order to automatically rate ITG Stamina charts based on the "measure breakdown". I explore how well these models do relative to some simple heuristics, and do some visualizing of how the ratings change based on metrics you might think of. 
+I use sequence-to-one models in order to automatically rate ITG Stamina charts based on the "measure breakdown". I explore how well these models do relative to some simple heuristics, and do some visualizing of how the ratings change based on metrics you might think of. I get some good results with simple techniques, but I play around with more complicated techniques anyways.
 
 * Introduction
 
