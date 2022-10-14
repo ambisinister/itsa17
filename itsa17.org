@@ -2,7 +2,7 @@
 
 * Abstract
 
-I use sequence-to-one models in order to automatically rate ITG Stamina charts based on the "measure breakdown". I explore how well these models do relative to some simple heuristics, and do some visualizing of how the ratings change based on metrics you might think of. I get some good results with simple techniques, but I play around with more complicated techniques anyways.
+I use machine learning to automatically rate ITG Stamina charts based on the "measure breakdown" commonly used as shorthand to describe charts. I use classical ML techniques and get fairly strong results, but I play around with sequence-to-one models anyways just for fun. I perform some visualization on how different features affect the rating, and suggest future directions this can go in.
 
 * Introduction
 
@@ -82,7 +82,7 @@ The solution here is to use a sequence model, which can take a variable length i
 
 ** Recurrent Neural Network (RNN)
 
-I build a simple RNN in pytorch (using nn.LSTM) on the above problem, feed it breakdowns, and penalize it based on Mean Squared Error loss. Out of the box, it appears to learn quite well! Just look at this 79% accurate model (when testing on the training data)
+I build a simple RNN in pytorch on the above problem, feed it breakdowns, and penalize it based on Mean Squared Error loss. Out of the box, it appears to learn quite well! Just look at this 79% accurate model (when testing on the training data)
 
 [[./figs/RNN_overfitting.png]]
 
@@ -90,15 +90,19 @@ However, what is actually happening is that we are horribly overfitting to our t
 
 [[./figs/RNN_overfitting_val.png]]
 
-Fighting overfitting is quite challenging here actually. Still working on it!
+I switched to a more direct implementation of RNNs instead of using the included nn.LSTM, since it doesn't really feel like we need the long-range dependency anyways. If we think about how a chart works, it feels like the hidden state should contain all the information about the chart[fn:4]. It's not possible for more notes later to make a chart /easier/, and blocks of stream don't really interact in any way with other blocks of stream.
+
+[[./figs/RNN.png]]
+
+That's more like it! It's clearly learned something which generalizes to the validation set! Funnily enough this doesn't manage to outperform SVM / kNN on our hand-reduced features, clocking in at around 47% accuracy and 0.79 mean absolute error. But, it is fairly competitive, and it got there directly from the measure breakdowns. How cool is that!
 
 * Discussion
 
 Ultimately, if you want something quick and easy, the Support Vector Classifier is a pretty safe choice. It performs well, it's rarely off by more than a block level, and it doesn't require substantial computational power. If you want to get a rating estimate, and you don't want to bother someone about it, it's a good pick. If people want to play with this, I could probably try serving the model in a browser or something.
 
-<<rnn results>>
+As fun as it was to fit a recurrent neural network to this problem, it does seem a bit overkill for this problem. 
 
-There's some fun potential for this for stamina players. It's possible this could be included in the stats portion of simply love (alongside breakdown, percent stream, etc), and a regression version of this could be used to give a very loose metric of "hard 15" vs "easy 15". I know games like [[https://www.youtube.com/watch?v=J5jibw9rqjk][jubeat]] do this, where charts within a certain level above 9 are marked as, for example, 10.9 instead of just as 10. 
+There's some fun potential for this for stamina players. It's possible this could be included in the stats portion of simply love (alongside breakdown, percent stream, etc), and a regression version of this could be used to give a very loose metric of "hard 15" vs "easy 15". I know games like [[https://www.youtube.com/watch?v=J5jibw9rqjk][jubeat]] do this, where charts within a certain level above 9 are marked as, for example, 10.9 instead of just as 10. This is probably most useful for players who use rate mods, since it's not always immediately clear how x1.2 bpm would affect the rating of the chart, and a quick reference point would be pretty useful.
 
 I am not advocating for these models to replace human raters; especially given that the grades are determined based upon the "flags" planted in the game's history based around the first players to ever reach a new block level. It's possible these flags don't make a lot of sense, and that certain charts throughout the game's history may or may not have been misrated. That said, "difficulty block" is a subjective concept, and whether that concept ought to scale linearly, logarathmically, exponentially, or with any other (even potentially nonlinear) function is a decision which can only be made insofar as it represents what the concept means -- how hard something is for a human. 
 
@@ -111,6 +115,8 @@ Anyone interested in future work for this problem could look towards automatical
 Anyone interested in doing this, but in a way sillier way, should consider just dumping all of the data into a large language model and seeing if it can do it. While it's not /really/ an NLP task, it /is/ a sequence task, and I would be really interested to see if LLMs could somehow fit a function on top of a sequence of numbers.
 
 * Footnotes
+
+[fn:4] There's an analogy to be made here to the [[https://en.wikipedia.org/wiki/Markov_property][markov property]]
 
 [fn:3] https://umap-learn.readthedocs.io/en/latest/index.html - It probably would have made sense to do a 3d scatter plot with colors denoting rating, since we only have 4 dimensions. For a "real" project I would porobably have done so, but I think umap looks cooler and still visually communicates that higher rated songs are similarly grouped with our features.
 

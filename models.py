@@ -7,37 +7,28 @@ import torch
 from torch import nn
 
 
-# It learns but overfits and refuses to generalize
-# At least get this to learn a linear classifier
-# https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
-# https://cnvrg.io/pytorch-lstm/
-# https://towardsdatascience.com/pytorch-lstms-for-time-series-data-cd16190929d7
 class RNN(nn.Module):
-    def __init__(self, hidden=128, inpsize=400):
+    def __init__(self, hidden=128):
         super(RNN, self).__init__()
-        self.l1 = nn.LSTM(input_size=inpsize, hidden_size=hidden)
-        #self.dropout = nn.Dropout()
-        self.out = nn.Linear(hidden, 1)
-        self.h0 = torch.zeros(1, 1, hidden).cuda()
-        self.c0 = torch.zeros(1, 1, hidden).cuda()
+        self.hiddensize = hidden
+        self.to_hidden = nn.Linear(1+hidden, hidden)
+        self.out = nn.Linear(1+hidden, 1)
 
-    # I think I am doing this wrong, init_hidden is a bit confusing
-    def forward(self, x):
+    def forward(self, x, hidden):
         x = x.unsqueeze(0)
         x = x.to("cuda")
-        r_out, hidden = self.l1(x, (self.h0, self.c0))
-        self.h0, self.c0 = hidden
-        #r_out = self.dropout(r_out) # regularization attempt
-        out = self.out(r_out)
+
+        conc = torch.cat((x, hidden), 1)
+        hidden = self.to_hidden(conc)
+        out = self.out(conc)
         
-        return out
+        return out, hidden
 
     def init_hidden(self):
-        self.h0 = torch.zeros(self.h0.size()).cuda()
-        self.c0 = torch.zeros(self.c0.size()).cuda()
+        return torch.zeros(1, self.hiddensize).cuda()
 
 class RNNClassifier():
-    def __init__(self, learning_rate=3e-4, epochs=20):
+    def __init__(self, learning_rate=3e-4, epochs=100):
         self.net = RNN()
         self.epochs = epochs
         self.criterion = nn.MSELoss()
@@ -49,24 +40,45 @@ class RNNClassifier():
         X = self.process_input([X])
         x = X[0]
         x = x.to("cuda")
-        x = x.unsqueeze(0)
-        pred = self.net(x)
-        return round(pred.detach().cpu().numpy()[0][0][0])
+        hidden = self.net.init_hidden()        
+
+        for i in range(x.size()[0]):
+            block = x[i].unsqueeze(0)
+            out, hidden = self.net(block, hidden)
+
+        return out.detach().cpu().numpy()[0][0]
 
     def process_input(self, x, labels=False):
         if labels:
             labels = [torch.FloatTensor([int(a)]) for a in x]
             return labels
         else:
-            breakdowns = [[*a[0], int(a[1])] for a in x]
-            #pad with zeros
-            max_size = 400
-            breakdowns = [[*a, *[0 for _ in range(max_size-len(a))]] for a in breakdowns]
-            breakdowns = np.array(breakdowns).astype(float)
+            breakdowns = [np.array([*a[0], int(a[1])]).astype(float) for a in x]
+            
+            #pad with zeros, unneeded usually
+            #max_size = 400
+            #breakdowns = [[*a, *[0 for _ in range(max_size-len(a))]] for a in breakdowns]
+            #breakdowns = np.array(breakdowns).astype(float)
+
             return [torch.FloatTensor(a) for a in breakdowns]
 
     def set_eval(self):
         self.net.eval()
+
+    def learn(self, inp_x, inp_y):
+        hidden = self.net.init_hidden()
+        self.net.zero_grad()
+        criterion = self.criterion
+
+        for i in range(inp_x.size()[0]):
+            block = inp_x[i].unsqueeze(0)
+            out, hidden = self.net(block, hidden)
+
+        loss = criterion(out[0][0], inp_y[0])
+        loss.backward()
+        self.optim.step()
+
+        return out, loss.item()
 
     def fit(self, train_X, train_Y):
         train_X = self.process_input(train_X) 
@@ -75,26 +87,18 @@ class RNNClassifier():
 
         for epoch in range(self.epochs):
             current_loss = 0
-            self.net.init_hidden()
+
             for i, (inp, lab) in enumerate(zip(train_X, train_Y)):
+                if i % 500 == 0:
+                    print(f"epoch {epoch} {i}/{len(train_X)}")
                 inp = inp.to("cuda")
                 lab = lab.to("cuda")
 
-                self.net.zero_grad()
-                
-                # Batch 1
-                inp = inp.unsqueeze(0)
-                (self.net.h0, self.net.c0) = tuple([each.data for each in (self.net.h0, self.net.c0)])
+                out, loss = self.learn(inp, lab)
+                current_loss += loss
 
-                out = self.net(inp)
-                loss = criterion(out[0][0], lab)
-                loss.backward()
-                self.optim.step()
-                current_loss += loss.item()
-                
-            print(f"Epoch {epoch}/{self.epochs} - Loss: {current_loss}")
-
-        return out, loss.item
+            print(f"Epoch {epoch+1}/{self.epochs} - Loss: {current_loss}")
+        
         
 
 
