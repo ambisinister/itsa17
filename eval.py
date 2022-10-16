@@ -60,14 +60,10 @@ if __name__ == '__main__':
               'Naive Bayes',
               'Recurrent Neural Network']
 
-    #Debug for easy
-    models = [RNNClassifier()]
-    titles = ['RNN']
-
     for model, title in zip(models, titles):
         model.fit(train_X, train_y)
 
-        if title == 'RNN':
+        if title == 'Recurrent Neural Network':
             model.set_eval()
 
         #Evaluate

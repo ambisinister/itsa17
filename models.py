@@ -27,13 +27,13 @@ class RNN(nn.Module):
     def init_hidden(self):
         return torch.zeros(1, self.hiddensize).cuda()
 
+# It's not exactly a classifier, but it's evaluated like one    
 class RNNClassifier():
     def __init__(self, learning_rate=3e-4, epochs=100):
         self.net = RNN()
         self.epochs = epochs
         self.criterion = nn.MSELoss()
         self.optim = torch.optim.Adam(self.net.parameters(), lr = learning_rate)
-        
         self.net.to("cuda")
 
     def predict(self, X):
@@ -54,22 +54,18 @@ class RNNClassifier():
             return labels
         else:
             breakdowns = [np.array([*a[0], int(a[1])]).astype(float) for a in x]
-            
-            #pad with zeros, unneeded usually
-            #max_size = 400
-            #breakdowns = [[*a, *[0 for _ in range(max_size-len(a))]] for a in breakdowns]
-            #breakdowns = np.array(breakdowns).astype(float)
-
             return [torch.FloatTensor(a) for a in breakdowns]
 
     def set_eval(self):
         self.net.eval()
 
+    # A bit more involved than normal so I separated this from normal training loop
     def learn(self, inp_x, inp_y):
         hidden = self.net.init_hidden()
         self.net.zero_grad()
         criterion = self.criterion
 
+        # Variable length input, no padding
         for i in range(inp_x.size()[0]):
             block = inp_x[i].unsqueeze(0)
             out, hidden = self.net(block, hidden)
@@ -99,8 +95,6 @@ class RNNClassifier():
 
             print(f"Epoch {epoch+1}/{self.epochs} - Loss: {current_loss}")
         
-        
-
 
 class LookupModel():
     def __init__(self, use_max=True):
@@ -226,8 +220,8 @@ class StreamClassifier():
     
 if __name__ == '__main__':
 
+    # If you run this file it will do a quick test of the lookup table
     a = LookupModel()
-
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

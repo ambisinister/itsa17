@@ -1,3 +1,7 @@
+"""
+This file generates breakdowns from a folder of smfiles
+"""
+
 import os
 import pickle
 
